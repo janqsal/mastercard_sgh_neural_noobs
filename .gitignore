@@ -1,2 +1,5 @@
 /Data
 /data
+**/models
+**/__pycache__
+/JS/src/mastercard_sgh_neural_noobs.egg-info
