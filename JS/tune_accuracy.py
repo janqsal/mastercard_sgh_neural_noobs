@@ -1,28 +1,25 @@
-# tune.py  ── minimal Optuna study around your run_model_pipeline
 import optuna
 from pathlib import Path
 from src.pipelines.model_pipeline import run_model_pipeline
 
 DATA_DIR   = "../data"
-MODELS_DIR = "../models/optuna"
+MODELS_DIR = "../models/optuna_acc3"
 Path(MODELS_DIR).mkdir(parents=True, exist_ok=True)
 
 def objective(trial: optuna.Trial) -> float:
-    """Return test-set AUC for a sampled XGBoost configuration."""
     params = {
-        "n_estimators"     : trial.suggest_int ("n_estimators", 100, 1000, step=20),
+        "n_estimators"     : trial.suggest_int ("n_estimators", 1800, 2500, step=25),
         "learning_rate"    : trial.suggest_float("learning_rate", 1e-3, 0.3, log=True),
-        "max_depth"        : trial.suggest_int ("max_depth", 2, 6),
+        "max_depth"        : trial.suggest_int ("max_depth", 9, 15),
         "subsample"        : trial.suggest_float("subsample", 0.3, 1.0),
         "colsample_bytree" : trial.suggest_float("colsample_bytree", 0.3, 1.0),
-        "reg_alpha"        : trial.suggest_float("reg_alpha",  1e-8, 10.0, log=True),
+        "reg_alpha"        : trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
         "reg_lambda"       : trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
-        "eval_metric"      : "auc",
+        "eval_metric"      : "logloss",
         "random_state"     : 42,
     }
 
-    # every trial writes its model (optional – you can skip saving if disk I/O hurts)
-    model_path = MODELS_DIR + f"/xgb_trial_{trial.number}.joblib"
+    model_path = f"{MODELS_DIR}/xgb_trial_{trial.number}.joblib"
 
     results = run_model_pipeline(
         X_train_path=f"{DATA_DIR}/X_train.parquet",
@@ -33,14 +30,16 @@ def objective(trial: optuna.Trial) -> float:
         oversample=True,
         xgb_params=params,
     )
-    return results["auc_test"]          # Optuna will maximise this
+
+    return results["accuracy_test"]
 
 if __name__ == "__main__":
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=500, timeout=None)   # run all night
+    study.optimize(objective, n_trials=70)
 
-    print("Best AUC :", study.best_value)
+    print("Best accuracy:", study.best_value)
     print("Best params:")
     for k, v in study.best_params.items():
         print(f"  {k}: {v}")
-    study.trials_dataframe().to_csv(MODELS_DIR + "/optuna_trials.csv", index=False)
+
+    study.trials_dataframe().to_csv(f"{MODELS_DIR}/trials.csv", index=False)

@@ -1,9 +1,17 @@
 import joblib
 import pandas as pd
-from sklearn.metrics import roc_auc_score
-
+from sklearn.metrics import roc_auc_score, accuracy_score
 from .build import build_model
 from .oversample import oversample
+
+__all__ = [
+    "train_model",
+    "save_model",
+    "load_model",
+    "predict_proba",
+    "auc_score",
+    "accuracy_cls",
+]
 
 
 def train_model(
@@ -37,5 +45,8 @@ def predict_proba(model, X: pd.DataFrame):
 
 
 def auc_score(model, X: pd.DataFrame, y_true: pd.Series) -> float:
-    proba = predict_proba(model, X)
-    return roc_auc_score(y_true, proba)
+    return roc_auc_score(y_true, predict_proba(model, X))
+
+
+def accuracy_cls(model, X: pd.DataFrame, y_true: pd.Series) -> float:
+    return accuracy_score(y_true, model.predict(X))

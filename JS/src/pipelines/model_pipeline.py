@@ -1,6 +1,11 @@
 from pathlib import Path
 import pandas as pd
-from src.modeling import train_model, save_model, auc_score
+from src.modeling import (
+    train_model,
+    save_model,
+    auc_score,
+    accuracy_cls,
+)
 
 
 def run_model_pipeline(
@@ -13,13 +18,13 @@ def run_model_pipeline(
     oversample: bool = True,
     xgb_params: dict | None = None,
 ):
-    """Train model, evaluate AUC, and return all objects needed for downstream notebook validation."""
+    """Train model, compute AUC + accuracy, return all artefacts."""
 
-    # load datasets
+    # load data
     X_train = pd.read_parquet(X_train_path)
     y_train = pd.read_parquet(y_train_path)["y"]
-    X_test = pd.read_parquet(X_test_path)
-    y_test = pd.read_parquet(y_test_path)["y"]
+    X_test  = pd.read_parquet(X_test_path)
+    y_test  = pd.read_parquet(y_test_path)["y"]
 
     # train
     model, X_res, y_res = train_model(
@@ -31,7 +36,9 @@ def run_model_pipeline(
 
     # metrics
     auc_train = auc_score(model, X_res, y_res)
-    auc_test = auc_score(model, X_test, y_test)
+    auc_test  = auc_score(model, X_test, y_test)
+    acc_train = accuracy_cls(model, X_res, y_res)
+    acc_test  = accuracy_cls(model, X_test, y_test)
 
     # save
     Path(model_output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -41,6 +48,8 @@ def run_model_pipeline(
         "model": model,
         "auc_train": auc_train,
         "auc_test": auc_test,
+        "accuracy_train": acc_train,
+        "accuracy_test": acc_test,
         "X_train_oversampled": X_res,
         "y_train_oversampled": y_res,
         "X_train": X_train,
