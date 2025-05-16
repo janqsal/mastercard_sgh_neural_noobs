@@ -28,32 +28,26 @@ def prepare_model_data(
     """
     df = df.copy()
 
-    # Step 1: remove the earliest transaction per user
     first_idx = (
-        df.sort_values(["user_id", "timestamp"])  # sort chronologically per user
+        df.sort_values(["user_id", "timestamp"])  
         .groupby("user_id")
         .head(1)
         .index
     )
     df = df.drop(index=first_idx)
 
-    # Step 2: drop columns
     df = df.drop(columns=to_drop, errors="ignore")
     df = df.drop(columns=to_think_but_drop, errors="ignore")
 
-    # Step 3: one-hot encode categoricals
     df = pd.get_dummies(df, columns=to_categorize, drop_first=False)
 
-    # Step 4: boolean → int
     for col in df.select_dtypes(include="bool").columns:
         df[col] = df[col].astype(int)
 
-    # Step 5: split by timestamp
     cutoff_ts = pd.to_datetime(cutoff)
     df_train = df[df["timestamp"] < cutoff_ts]
     df_test = df[df["timestamp"] >= cutoff_ts]
 
-    # Step 6: per‑merchant bad rate
     bad = (
         df.groupby("merchant_id")[target]
         .agg(total_transactions="count", num_frauds="sum")
